@@ -1,0 +1,38 @@
+[
+  {
+    "ticket_code_temp": "T-1001",
+    "subject": "Unable to log in using my corporate email",
+    "expected_verdict": "UNIQUE",
+    "expected_similarity_score": 0.0,
+    "expected_decision_flow": "FAISS Only",
+    "expected_matched_ticket": null,
+    "rationale": "First ticket submitted in the authentication category. No candidates exist in the vector database to match against, classifying the ticket as UNIQUE automatically."
+  },
+  {
+    "ticket_code_temp": "T-1002",
+    "subject": "Unable to log in using my corporate email",
+    "expected_verdict": "DUPLICATE",
+    "expected_similarity_score": 1.0,
+    "expected_decision_flow": "Auto Duplicate (90%+)",
+    "expected_matched_ticket": "T-1001",
+    "rationale": "Exact match of subject and description with T-1001. Cosine similarity score resolves to 100%, triggering an auto-merge under Rule A without calling Gemini."
+  },
+  {
+    "ticket_code_temp": "T-1003",
+    "subject": "Corporate email login page failing with 403 error",
+    "expected_verdict": "DUPLICATE",
+    "expected_similarity_score": 0.835,
+    "expected_decision_flow": "Gemini Verified",
+    "expected_matched_ticket": "T-1001",
+    "rationale": "Subject and description have strong semantic overlap with T-1001. FAISS similarity resolves to 83.5% (triggering Rule B). Gemini evaluates the pair, returns same_issue = True, and links the ticket as a duplicate."
+  },
+  {
+    "ticket_code_temp": "T-1004",
+    "subject": "Pricing page link is throwing 500 server error",
+    "expected_verdict": "UNIQUE",
+    "expected_similarity_score": 0.124,
+    "expected_decision_flow": "FAISS Only",
+    "expected_matched_ticket": null,
+    "rationale": "New category ('billing-support') and completely different text structure. Vector similarity is well below the 75% threshold (Rule D), classifying it as UNIQUE."
+  }
+]

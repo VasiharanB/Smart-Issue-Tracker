@@ -1,0 +1,38 @@
+[
+  {
+    "ticket_code_temp": "T-1001",
+    "first_name": "John",
+    "last_name": "Doe",
+    "category_slug": "authentication",
+    "subject": "Unable to log in using my corporate email",
+    "description": "I am receiving a 403 Forbidden error every time I try to submit my password on the portal login screen. I have tried clearing my browser cache but the issue persists.",
+    "type": "UNIQUE_MASTER"
+  },
+  {
+    "ticket_code_temp": "T-1002",
+    "first_name": "Alice",
+    "last_name": "Smith",
+    "category_slug": "authentication",
+    "subject": "Unable to log in using my corporate email",
+    "description": "I am receiving a 403 Forbidden error every time I try to submit my password on the portal login screen. I have tried clearing my browser cache but the issue persists.",
+    "type": "EXACT_DUPLICATE_OF_T-1001"
+  },
+  {
+    "ticket_code_temp": "T-1003",
+    "first_name": "Bob",
+    "last_name": "Johnson",
+    "category_slug": "authentication",
+    "subject": "Corporate email login page failing with 403 error",
+    "description": "Can't log in with corporate email. Getting forbidden error on password screen. Browser cache clear didn't help.",
+    "type": "SEMANTIC_DUPLICATE_OF_T-1001"
+  },
+  {
+    "ticket_code_temp": "T-1004",
+    "first_name": "Sarah",
+    "last_name": "Connor",
+    "category_slug": "billing-support",
+    "subject": "Pricing page link is throwing 500 server error",
+    "description": "When I click on the checkout button on the annual pricing tier, the page crashes with a 500 Internal Server Error. Please inspect.",
+    "type": "UNIQUE_NEW"
+  }
+]
