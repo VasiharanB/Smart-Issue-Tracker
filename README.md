@@ -236,15 +236,15 @@ Our development team represents diverse engineering disciplines:
 * 👤 **Vasiharan** — *Lead Software Engineer & RAG Architect*
   * Responsible for core hybrid deduplication logic, FAISS indexing, Django services layer, and DB design.
   * 📄 [Vasiharan_Resume.pdf](Team_Resumes/Vasiharan_Resume.pdf)
-* 👤 **Team Member 2** — *Frontend UI/UX Specialist*
+* 👤 **Surhendhaar V** — *Frontend UI/UX Specialist*
   * Developed the React application, dashboard layouts, custom data visualizations (Recharts), and responsive intake interface.
-  * 📄 [TeamMember2_Resume.pdf](Team_Resumes/TeamMember2_Resume.pdf)
-* 👤 **Team Member 3** — *Backend & Database Engineer*
+  * 📄 [Surhendhaar_Resume.pdf](Team_Resumes/Surhendhaar_Resume.pdf)
+* 👤 **Mamuduri Kowshik S** — *Backend & Database Engineer*
   * Maintained relational consistency, handled migrations, optimized PostgreSQL queries, and structured DRF serialization layers.
-  * 📄 [TeamMember3_Resume.pdf](Team_Resumes/TeamMember3_Resume.pdf)
-* 👤 **Team Member 4** — *DevOps, QA, & Integration Architect*
+  * 📄 [Mamuduri_Kowshik_S.pdf](Team_Resumes/Mamuduri_Kowshik_S.pdf)
+* 👤 **Viveka** — *DevOps, QA, & Integration Architect*
   * Created unit test suites, structured the Gemini verification retry mechanics, handled security audits, and mapped build pipelines.
-  * 📄 [TeamMember4_Resume.pdf](Team_Resumes/TeamMember4_Resume.pdf)
+  * 📄 [Viveka_Resume.pdf](Team_Resumes/Viveka_Resume.pdf)
 
 ---
 
