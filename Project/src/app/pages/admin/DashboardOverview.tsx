@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ArrowRight, Brain, Copy, Target, Ticket, Loader2 } from "lucide-react";
+import { apiFetch } from "../../../utils/apiFetch";
 import { Link } from "react-router";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -12,10 +13,7 @@ export function DashboardOverview() {
     const fetchDashboardData = async () => {
       try {
         console.log("Fetching admin dashboard analytics from backend...");
-        const response = await fetch("/api/admin/dashboard", { credentials: "include" });
-        if (!response.ok) {
-          throw new Error(`Failed to load metrics. Server status: ${response.status}`);
-        }
+        const response = await apiFetch("/admin/dashboard");
         const data = await response.json();
         console.log("Dashboard analytics loaded:", data);
         setData(data);

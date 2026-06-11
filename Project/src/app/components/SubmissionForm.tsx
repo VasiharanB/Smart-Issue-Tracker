@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_BASE_URL from '../../config/api';
 
 export function SubmissionForm() {
   const [firstName, setFirstName] = useState('');
@@ -12,7 +13,7 @@ export function SubmissionForm() {
   React.useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/categories");
+        const response = await fetch(`${API_BASE_URL}/categories`);
         if (response.ok) {
           const data = await response.json();
           setCategories(data);
@@ -55,7 +56,7 @@ export function SubmissionForm() {
 
     try {
       console.log('Sending ticket data to Django backend...');
-      const response = await fetch('/api/tickets/create', {
+      const response = await fetch(`${API_BASE_URL}/tickets/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,37 +70,25 @@ export function SubmissionForm() {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const data = await response.json();
       console.log('Response from Django:', data);
 
-      if (response.ok) {
-        // Success
-        setSuccessMessage(`Ticket created successfully! Code: ${data.ticket_code}. Status: ${data.status}`);
-        
-        // Clear fields
-        setFirstName('');
-        setLastName('');
-        setCategory('');
-        setSubject('');
-        setDescription('');
-        setValidationErrors({});
-      } else {
-        // Handle backend errors
-        if (data.error) {
-          setErrorMessage(data.error);
-        } else if (typeof data === 'object') {
-          // Flatten standard DRF serializer field validation errors
-          const fieldErrors = Object.entries(data)
-            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-            .join(' | ');
-          setErrorMessage(fieldErrors || 'Submission failed. Please check your input.');
-        } else {
-          setErrorMessage('Submission failed. Please try again.');
-        }
-      }
-    } catch (err) {
+      // Success
+      setSuccessMessage(`Ticket created successfully! Code: ${data.ticket_code}. Status: ${data.status}`);
+      
+      // Clear fields
+      setFirstName('');
+      setLastName('');
+      setCategory('');
+      setSubject('');
+      setDescription('');
+      setValidationErrors({});
+    } catch (err: any) {
       console.error('Network or server error:', err);
-      setErrorMessage('Could not connect to the backend server. Please verify Django is running.');
+      setErrorMessage(err.message || 'Could not connect to the backend server. Please verify Django is running.');
     } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CreditCard, HardDrive, Key, Mail, Package, Shield, Settings, Plus, X, Loader2, AlertCircle } from "lucide-react";
+import { apiFetch } from "../../../utils/apiFetch";
 
 const iconMap: Record<string, any> = {
   Key: Key,
@@ -31,10 +32,7 @@ export function CategoriesPage() {
     setError("");
     try {
       console.log("Fetching dynamic categories list...");
-      const response = await fetch("/api/categories");
-      if (!response.ok) {
-        throw new Error(`Server returned status: ${response.status}`);
-      }
+      const response = await apiFetch("/categories");
       const data = await response.json();
       setCategories(data);
     } catch (err: any) {
@@ -75,22 +73,16 @@ export function CategoriesPage() {
     setSubmitting(true);
     try {
       console.log("Creating category:", catName);
-      const response = await fetch("/api/categories", {
+      await apiFetch("/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: catName.trim(), icon_name: catIcon }),
-        credentials: "include"
       });
-      const data = await response.json();
-      if (response.ok) {
-        setIsAddOpen(false);
-        fetchCategories();
-      } else {
-        setFormError(data.name ? `Error: ${data.name.join(", ")}` : "Failed to create category.");
-      }
+      setIsAddOpen(false);
+      fetchCategories();
     } catch (err) {
       console.error(err);
-      setFormError("Could not connect to backend server.");
+      setFormError("Failed to create category. Make sure name is unique.");
     } finally {
       setSubmitting(false);
     }
@@ -108,22 +100,16 @@ export function CategoriesPage() {
     setSubmitting(true);
     try {
       console.log("Updating category ID:", selectedCategory.id);
-      const response = await fetch(`/api/categories/${selectedCategory.id}`, {
+      await apiFetch(`/categories/${selectedCategory.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: catName.trim(), icon_name: catIcon }),
-        credentials: "include"
       });
-      const data = await response.json();
-      if (response.ok) {
-        setIsEditOpen(false);
-        fetchCategories();
-      } else {
-        setFormError(data.name ? `Error: ${data.name.join(", ")}` : "Failed to update category.");
-      }
+      setIsEditOpen(false);
+      fetchCategories();
     } catch (err) {
       console.error(err);
-      setFormError("Could not connect to backend server.");
+      setFormError("Failed to update category. Make sure name is unique.");
     } finally {
       setSubmitting(false);
     }
@@ -139,29 +125,14 @@ export function CategoriesPage() {
     setFormError("");
     try {
       console.log("Deleting category ID:", selectedCategory.id);
-      const response = await fetch(`/api/categories/${selectedCategory.id}`, {
+      await apiFetch(`/categories/${selectedCategory.id}`, {
         method: "DELETE",
-        credentials: "include"
       });
-      if (response.ok) {
-        setIsEditOpen(false);
-        fetchCategories();
-      } else {
-        const text = await response.text();
-        let errorMsg = "Failed to delete category.";
-        try {
-          const parsed = JSON.parse(text);
-          errorMsg = parsed.detail || parsed.error || errorMsg;
-        } catch {
-          if (text.includes("ProtectedError") || response.status === 500) {
-            errorMsg = "Cannot delete category as there are tickets associated with it.";
-          }
-        }
-        setFormError(errorMsg);
-      }
+      setIsEditOpen(false);
+      fetchCategories();
     } catch (err) {
       console.error(err);
-      setFormError("Could not connect to backend server.");
+      setFormError("Cannot delete category as there are tickets associated with it.");
     } finally {
       setSubmitting(false);
     }

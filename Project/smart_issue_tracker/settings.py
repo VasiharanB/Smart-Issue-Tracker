@@ -42,15 +42,15 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS handling
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = 'smart_issue_tracker.urls'
@@ -155,9 +155,32 @@ REST_FRAMEWORK = {
 
 
 # CORS Configuration
+import os
+
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all only in local development
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+VERCEL_FRONTEND_URL = os.environ.get("VERCEL_FRONTEND_URL")
+
+if VERCEL_FRONTEND_URL:
+    CORS_ALLOWED_ORIGINS.append(VERCEL_FRONTEND_URL)
+
+CSRF_TRUSTED_ORIGINS = []
+
+if VERCEL_FRONTEND_URL:
+    # Ensure scheme is present for CSRF_TRUSTED_ORIGINS to avoid Django ImproperlyConfigured
+    csrf_origin = VERCEL_FRONTEND_URL if VERCEL_FRONTEND_URL.startswith(("http://", "https://")) else f"https://{VERCEL_FRONTEND_URL}"
+    CSRF_TRUSTED_ORIGINS.append(csrf_origin)
+
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
 
 
 # Deduplication & AI settings

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate, Link } from "react-router";
+import { apiFetch } from "../../utils/apiFetch";
 import { 
   LayoutDashboard, 
   Ticket, 
@@ -30,9 +31,9 @@ export function AdminLayout() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const response = await fetch("/api/auth/me", { credentials: "include" });
+        const response = await apiFetch("/auth/me", {}, true);
         const data = await response.json();
-        if (response.ok && data.username) {
+        if (data.username) {
           setUser(data);
         } else {
           setUser(null);
@@ -58,21 +59,16 @@ export function AdminLayout() {
 
     setIsLoggingIn(true);
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include"
       });
       const data = await response.json();
-      if (response.ok) {
-        setUser(data);
-      } else {
-        setLoginError(data.error || "Authentication failed.");
-      }
+      setUser(data);
     } catch (err) {
       console.error("Login request failed:", err);
-      setLoginError("Could not connect to the authentication server.");
+      setLoginError("Invalid username/password or server connection error.");
     } finally {
       setIsLoggingIn(false);
     }
@@ -81,9 +77,8 @@ export function AdminLayout() {
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      await fetch("/api/auth/logout", { 
+      await apiFetch("/auth/logout", { 
         method: "POST",
-        credentials: "include"
       });
     } catch (err) {
       console.error("Logout request failed:", err);

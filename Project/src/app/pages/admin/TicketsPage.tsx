@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Filter, Search, Loader2, X, AlertCircle, ArrowUpRight } from "lucide-react";
 import { useSearchParams } from "react-router";
+import { apiFetch } from "../../../utils/apiFetch";
 
 export function TicketsPage() {
   const [searchParams] = useSearchParams();
@@ -42,11 +43,9 @@ export function TicketsPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/categories");
-        if (response.ok) {
-          const data = await response.json();
-          setCategories(data);
-        }
+        const response = await apiFetch("/categories");
+        const data = await response.json();
+        setCategories(data);
       } catch (err) {
         console.error("Failed to load categories filter list:", err);
       }
@@ -66,10 +65,7 @@ export function TicketsPage() {
         category: categoryFilter
       });
       console.log(`Fetching tickets listing with query params: ${params.toString()}`);
-      const response = await fetch(`/api/tickets?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`Server returned error: ${response.status}`);
-      }
+      const response = await apiFetch(`/tickets?${params.toString()}`);
       const data = await response.json();
       setTickets(data.results || []);
       setTotalCount(data.count || 0);
@@ -95,8 +91,7 @@ export function TicketsPage() {
     
     try {
       console.log(`Fetching ticket detail: ${ticket.ticket_code}`);
-      const response = await fetch(`/api/tickets/${ticket.ticket_code}`);
-      if (!response.ok) throw new Error("Could not retrieve ticket logs.");
+      const response = await apiFetch(`/tickets/${ticket.ticket_code}`);
       const detailedData = await response.json();
       setSelectedTicket(detailedData);
     } catch (err: any) {
@@ -115,7 +110,7 @@ export function TicketsPage() {
 
     try {
       console.log(`Sending manual status override to backend for Ticket ID: ${selectedTicket.id}`);
-      const response = await fetch(`/api/admin/ticket/${selectedTicket.id}/status`, {
+      const response = await apiFetch(`/admin/ticket/${selectedTicket.id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -125,24 +120,19 @@ export function TicketsPage() {
           notes: overrideNotes.trim(),
           parent_ticket_code: newStatus === "DUPLICATE" ? overrideParentCode.trim() : undefined
         }),
-        credentials: "include"
       });
 
       const data = await response.json();
-      if (response.ok) {
-        console.log("Status updated successfully:", data);
-        // Refresh detail view
-        setSelectedTicket(data);
-        setOverrideNotes("");
-        setOverrideParentCode("");
-        // Refresh grid list
-        fetchTickets();
-      } else {
-        setDetailError(data.error || "Failed to save status update.");
-      }
+      console.log("Status updated successfully:", data);
+      // Refresh detail view
+      setSelectedTicket(data);
+      setOverrideNotes("");
+      setOverrideParentCode("");
+      // Refresh grid list
+      fetchTickets();
     } catch (err: any) {
       console.error("Status override failed:", err);
-      setDetailError("Network error. Failed to commit override.");
+      setDetailError("Failed to commit override. Please verify the master ticket code is correct.");
     } finally {
       setIsUpdatingStatus(false);
     }

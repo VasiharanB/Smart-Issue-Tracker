@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Shield, Check, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { apiFetch } from "../../../utils/apiFetch";
 
 export function SettingsPage() {
   const [firstName, setFirstName] = useState("");
@@ -18,14 +19,12 @@ export function SettingsPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch("/api/auth/me", { credentials: "include" });
-        if (response.ok) {
-          const data = await response.json();
-          setUsername(data.username || "");
-          setFirstName(data.first_name || "");
-          setLastName(data.last_name || "");
-          setEmail(data.email || "");
-        }
+        const response = await apiFetch("/auth/me");
+        const data = await response.json();
+        setUsername(data.username || "");
+        setFirstName(data.first_name || "");
+        setLastName(data.last_name || "");
+        setEmail(data.email || "");
       } catch (err) {
         console.error("Failed to load profile settings:", err);
         setError("Failed to retrieve profile data.");
@@ -43,7 +42,7 @@ export function SettingsPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/me", {
+      const response = await apiFetch("/auth/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -51,17 +50,12 @@ export function SettingsPage() {
           last_name: lastName.trim(),
           email: email.trim()
         }),
-        credentials: "include"
       });
       const data = await response.json();
-      if (response.ok) {
-        setSuccess("Profile settings updated successfully!");
-        setFirstName(data.first_name || "");
-        setLastName(data.last_name || "");
-        setEmail(data.email || "");
-      } else {
-        setError(data.error || "Failed to save profile changes.");
-      }
+      setSuccess("Profile settings updated successfully!");
+      setFirstName(data.first_name || "");
+      setLastName(data.last_name || "");
+      setEmail(data.email || "");
     } catch (err) {
       console.error(err);
       setError("Failed to commit settings changes. Verify connection.");

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, XCircle, Search, Filter, Loader2, Info, X } from "lucide-react";
+import { apiFetch } from "../../../utils/apiFetch";
 
 export function HistoryPage() {
   const [history, setHistory] = useState<any[]>([]);
@@ -37,10 +38,7 @@ export function HistoryPage() {
         verdict: verdictFilter
       });
       console.log(`Fetching analysis history with parameters: ${params.toString()}`);
-      const response = await fetch(`/api/admin/history?${params.toString()}`, { credentials: "include" });
-      if (!response.ok) {
-        throw new Error(`Server returned error: ${response.status}`);
-      }
+      const response = await apiFetch(`/admin/history?${params.toString()}`);
       const data = await response.json();
       setHistory(data.results || []);
       setTotalCount(data.count || 0);
