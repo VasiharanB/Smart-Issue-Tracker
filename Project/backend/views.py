@@ -11,7 +11,9 @@ from django.shortcuts import get_object_or_404
 import datetime
 import logging
 
-from .models import Category, Ticket, TicketHistory
+from django.conf import settings
+from .models import Category, Ticket, TicketHistory, EmbeddingReference
+from .ai.vector_store import FAISSVectorStore
 from .serializers import (
     CategorySerializer,
     TicketCreateSerializer,
@@ -538,3 +540,70 @@ class AdminHistoryAPIView(ListAPIView):
             queryset = queryset.filter(action__in=["INGESTION", "MANUAL_OVERRIDE_UNIQUE"])
 
         return queryset
+
+
+class AdminDebugDuplicatesAPIView(APIView):
+    """
+    GET /api/admin/debug-duplicates
+    Returns system diagnostic metrics for the duplicate detection pipeline.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            total_tickets = Ticket.objects.count()
+            total_embeddings = EmbeddingReference.objects.count()
+
+            vector_store = FAISSVectorStore(dimension=384, index_file_path=settings.FAISS_INDEX_PATH)
+            faiss_vectors = vector_store.index.ntotal
+
+            duplicate_threshold = getattr(settings, "DEDUPLICATION_SIMILARITY_THRESHOLD", 0.75)
+
+            # Health Check & Sync Validation
+            ticket_ids = set(Ticket.objects.values_list('id', flat=True))
+            unique_tickets = set(Ticket.objects.filter(status=Ticket.Status.UNIQUE).values_list('id', flat=True))
+            embedding_ticket_ids = set(EmbeddingReference.objects.values_list('ticket_id', flat=True))
+            faiss_ids = set(vector_store.id_map)
+
+            # orphaned_faiss_ids: FAISS IDs that don't exist in Ticket database table
+            orphaned_faiss_ids = list(faiss_ids - ticket_ids)
+
+            # missing_embeddings: UNIQUE status tickets that have no EmbeddingReference
+            # or EmbeddingReference ticket IDs that are missing from FAISS mapping
+            unique_no_ref = unique_tickets - embedding_ticket_ids
+            ref_no_faiss = embedding_ticket_ids - faiss_ids
+            missing_embeddings = list(unique_no_ref | ref_no_faiss)
+
+            # stale_index_entries: FAISS IDs that don't have EmbeddingReference
+            stale_index_entries = list(faiss_ids - embedding_ticket_ids)
+
+            index_synced = (
+                len(orphaned_faiss_ids) == 0 and
+                len(missing_embeddings) == 0 and
+                len(stale_index_entries) == 0
+            )
+
+            # Last duplicate check query (from history logs)
+            last_log = TicketHistory.objects.filter(
+                action__in=["INGESTION", "DUPLICATE_REPORTED"]
+            ).order_by("-created_at").first()
+            last_duplicate_check = last_log.created_at.isoformat() if last_log else None
+
+            return Response({
+                "total_tickets": total_tickets,
+                "total_embeddings": total_embeddings,
+                "faiss_vectors": faiss_vectors,
+                "duplicate_threshold": duplicate_threshold,
+                "index_synced": index_synced,
+                "orphaned_faiss_ids": orphaned_faiss_ids,
+                "missing_embeddings": missing_embeddings,
+                "stale_index_entries": stale_index_entries,
+                "last_duplicate_check": last_duplicate_check
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.exception("Debug duplicates diagnostic endpoint failed.")
+            return Response(
+                {"error": f"Diagnostic check failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

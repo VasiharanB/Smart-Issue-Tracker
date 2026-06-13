@@ -11,7 +11,8 @@ from .views import (
     AdminLoginAPIView,
     AdminLogoutAPIView,
     AdminMeAPIView,
-    AdminHistoryAPIView
+    AdminHistoryAPIView,
+    AdminDebugDuplicatesAPIView
 )
 
 urlpatterns = [
@@ -32,4 +33,5 @@ urlpatterns = [
     path('admin/ticket/<int:id>/status', TicketStatusUpdateAPIView.as_view(), name='ticket-status-update'),
     path('admin/trending', TrendingIssuesAPIView.as_view(), name='admin-trending'),
     path('admin/history', AdminHistoryAPIView.as_view(), name='admin-history'),
+    path('admin/debug-duplicates', AdminDebugDuplicatesAPIView.as_view(), name='admin-debug-duplicates'),
 ]

@@ -25,8 +25,10 @@ class TicketSubmissionService:
       4. IF DUPLICATE: Increments supporter_count on the master ticket and returns it.
       5. IF UNIQUE: Creates a new ticket, stores the vector embedding in DB, and indexes it in FAISS.
     """
-    def __init__(self, index_file_path: str = "faiss_index.bin"):
+    def __init__(self, index_file_path: str = None):
         self.embedding_service = EmbeddingService()
+        if index_file_path is None:
+            index_file_path = getattr(settings, "FAISS_INDEX_PATH", "faiss_index.bin")
         self.vector_store = FAISSVectorStore(dimension=384, index_file_path=index_file_path)
         self.verifier = GeminiVerifier()
         
@@ -58,7 +60,7 @@ class TicketSubmissionService:
         try:
             category = Category.objects.get(slug=category_slug)
         except Category.DoesNotExist as e:
-            logger.error(f"Cannot submit ticket. Category slug '{category_slug}' not found.")
+            logger.exception(f"Cannot submit ticket. Category slug '{category_slug}' not found.")
             raise ValueError(f"Category slug '{category_slug}' does not exist.") from e
 
         # Construct search payload matching the model vector index format
@@ -68,11 +70,23 @@ class TicketSubmissionService:
         try:
             embedding = self.embedding_service.get_embedding(payload)
         except Exception as e:
-            logger.error(f"Failed to generate query embedding: {e}")
-            raise RuntimeError("Deduplication failed due to vector generation error.") from e
+            logger.exception(f"Failed to generate query embedding for text: {payload[:100]}...")
+            raise RuntimeError(f"Deduplication failed due to vector generation error: {e}") from e
+
+        # Get the FAISS vector count before search
+        try:
+            faiss_count_before = self.vector_store.index.ntotal
+        except Exception as e:
+            logger.exception("Failed to query current FAISS index size.")
+            raise RuntimeError(f"FAISS index count query failure: {e}") from e
 
         # 2. Query FAISS index for Top 5 similar tickets
-        candidates = self.vector_store.search(embedding, top_k=5)
+        try:
+            candidates = self.vector_store.search(embedding, top_k=5)
+        except Exception as e:
+            logger.exception("FAISS search query failed during ticket ingestion.")
+            raise RuntimeError(f"FAISS search operation failed during ticket ingestion: {e}") from e
+
         logger.info(f"FAISS search retrieved {len(candidates)} similarity matches.")
 
         # 3. Find the best candidate that matches the category and is not already a duplicate
@@ -87,7 +101,10 @@ class TicketSubmissionService:
                 existing_ticket = Ticket.objects.get(id=ticket_id)
             except Ticket.DoesNotExist:
                 logger.warning(f"Ticket ID {ticket_id} cached in FAISS but missing in DB. Cleaning index...")
-                self.vector_store.remove_ticket(ticket_id)
+                try:
+                    self.vector_store.remove_ticket(ticket_id)
+                except Exception as clean_err:
+                    logger.exception(f"Failed to remove stale ticket {ticket_id} from FAISS index")
                 continue
 
             # Skip comparing if candidate itself is marked as duplicate
@@ -211,6 +228,18 @@ class TicketSubmissionService:
             f"  - Decision Flow: {decision_flow}"
         )
 
+        detection_method = "FAISS_ONLY"
+        if best_candidate:
+            if best_similarity >= 0.90:
+                detection_method = "FAISS_AUTO"
+            elif best_similarity >= 0.75:
+                if verification_source == "faiss_fallback":
+                    detection_method = "FAISS_FALLBACK"
+                else:
+                    detection_method = "GEMINI_VERIFIED"
+        else:
+            detection_method = "NONE"
+
         if is_match and best_candidate is not None:
             # Match confirmed! Apply duplicate resolutions
             logger.info(f"Verified duplicate found: {best_candidate.ticket_code}. Confidence: {confidence}% (Source: {verification_source})")
@@ -243,6 +272,11 @@ class TicketSubmissionService:
                     metadata={
                         "parent_ticket_code": best_candidate.ticket_code,
                         "similarity_score": best_similarity,
+                        "matched_ticket": best_candidate.ticket_code,
+                        "matched_ticket_id": best_candidate.id,
+                        "detection_method": detection_method,
+                        "gemini_confidence": verification.get("confidence") if verification else None,
+                        "gemini_same_issue": verification.get("same_issue") if verification else None,
                         "decision_flow": decision_flow,
                         "verification_source": verification_source,
                         "reporter_first_name": ticket_data.get("first_name"),
@@ -259,6 +293,11 @@ class TicketSubmissionService:
                     metadata={
                         "parent_ticket_code": best_candidate.ticket_code,
                         "similarity_score": best_similarity,
+                        "matched_ticket": best_candidate.ticket_code,
+                        "matched_ticket_id": best_candidate.id,
+                        "detection_method": detection_method,
+                        "gemini_confidence": verification.get("confidence") if verification else None,
+                        "gemini_same_issue": verification.get("same_issue") if verification else None,
                         "decision_flow": decision_flow,
                         "verification_source": verification_source,
                         "reporter_first_name": ticket_data.get("first_name"),
@@ -267,6 +306,16 @@ class TicketSubmissionService:
                     }
                 )
             
+            # Log structured output
+            logger.info(f"[TICKET] {new_ticket.ticket_code} submitted")
+            logger.info(f"[EMBEDDING] generated dim={len(embedding)}")
+            logger.info(f"[FAISS] vectors={faiss_count_before} candidates={len(candidates)}")
+            logger.info(f"[MATCH] ticket={best_candidate.ticket_code} score={best_similarity:.4f}")
+            logger.info(f"[THRESHOLD] auto_duplicate={str(best_similarity >= 0.90).lower()}")
+            if best_similarity >= 0.75 and best_similarity < 0.90:
+                logger.info(f"[GEMINI] verdict={str(verification.get('same_issue', False)).lower() if verification else 'false'} confidence={verification.get('confidence', 0) if verification else 0}")
+            logger.info(f"[RESULT] status={new_ticket.status} parent={new_ticket.parent_ticket.ticket_code}")
+
             return new_ticket, True
 
         # 4. If no duplicates are verified, create a new Ticket entry
@@ -283,14 +332,22 @@ class TicketSubmissionService:
             )
             
             # B. Store vector coordinates in PostgreSQL EmbeddingReference
-            EmbeddingReference.objects.create(
-                ticket=new_ticket,
-                embedding=embedding,
-                model_name=self.embedding_service.model_name
-            )
+            try:
+                EmbeddingReference.objects.create(
+                    ticket=new_ticket,
+                    embedding=embedding,
+                    model_name=self.embedding_service.model_name
+                )
+            except Exception as e:
+                logger.exception(f"Failed to create EmbeddingReference for ticket ID {new_ticket.id}")
+                raise RuntimeError(f"EmbeddingReference creation failure: {e}") from e
             
             # C. Register vector coordinates in FAISS
-            self.vector_store.add_vector(new_ticket.id, embedding)
+            try:
+                self.vector_store.add_vector(new_ticket.id, embedding)
+            except Exception as e:
+                logger.exception(f"Failed to register vector for ticket ID {new_ticket.id} in FAISS")
+                raise RuntimeError(f"FAISS vector registration failure: {e}") from e
             
             # D. Record audit history log
             TicketHistory.objects.create(
@@ -299,6 +356,11 @@ class TicketSubmissionService:
                 notes=reason or "Verified as unique issue. Saved ticket and generated vector indexes.",
                 metadata={
                     "similarity_score": best_similarity,
+                    "matched_ticket": best_candidate.ticket_code if best_candidate else None,
+                    "matched_ticket_id": best_candidate.id if best_candidate else None,
+                    "detection_method": detection_method,
+                    "gemini_confidence": verification.get("confidence") if verification else None,
+                    "gemini_same_issue": verification.get("same_issue") if verification else None,
                     "decision_flow": decision_flow,
                     "verification_source": verification_source,
                     "reason": reason or "Verified as unique issue. Saved ticket and generated vector indexes."
@@ -306,6 +368,20 @@ class TicketSubmissionService:
             )
             
         logger.info(f"Registered new unique ticket {new_ticket.ticket_code} in database and search index.")
+        
+        # Log structured output
+        logger.info(f"[TICKET] {new_ticket.ticket_code} submitted")
+        logger.info(f"[EMBEDDING] generated dim={len(embedding)}")
+        logger.info(f"[FAISS] vectors={faiss_count_before} candidates={len(candidates)}")
+        if best_candidate:
+            logger.info(f"[MATCH] ticket={best_candidate.ticket_code} score={best_similarity:.4f}")
+        else:
+            logger.info(f"[MATCH] ticket=None score=0.0000")
+        logger.info(f"[THRESHOLD] auto_duplicate={str(best_similarity >= 0.90).lower()}")
+        if best_similarity >= 0.75 and best_similarity < 0.90:
+            logger.info(f"[GEMINI] verdict={str(verification.get('same_issue', False)).lower() if verification else 'false'} confidence={verification.get('confidence', 0) if verification else 0}")
+        logger.info(f"[RESULT] status={new_ticket.status} parent=None")
+
         return new_ticket, False
 
 

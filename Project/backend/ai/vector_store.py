@@ -5,13 +5,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from django.conf import settings
+
 class FAISSVectorStore:
     """
     Manages vector storage and similarity searches using a FAISS Flat Inner Product index.
     Embeddings are L2 normalized before insertion and lookup to evaluate true Cosine Similarity.
     """
-    def __init__(self, dimension: int = 384, index_file_path: str = "faiss_index.bin"):
+    def __init__(self, dimension: int = 384, index_file_path: str = None):
         self.dimension = dimension
+        if index_file_path is None:
+            index_file_path = getattr(settings, "FAISS_INDEX_PATH", "faiss_index.bin")
         self.index_file_path = index_file_path
         self.index = faiss.IndexFlatIP(self.dimension)
         
@@ -40,7 +44,6 @@ class FAISSVectorStore:
             faiss.normalize_L2(np_vector)
             
             # If the ticket ID already exists in index, we don't duplicate it.
-            # (Note: In dynamic production systems, index rebuilds or updates are standard).
             if ticket_id in self.id_map:
                 logger.warning(f"Ticket ID {ticket_id} already exists in FAISS map. Skipping add.")
                 return
@@ -50,8 +53,8 @@ class FAISSVectorStore:
             self.save()
             logger.info(f"Added ticket ID {ticket_id} to vector index. Total: {self.index.ntotal}")
         except Exception as e:
-            logger.error(f"Failed to add vector to FAISS: {e}")
-            raise e
+            logger.exception(f"Failed to add vector to FAISS for ticket {ticket_id}")
+            raise RuntimeError(f"FAISS add vector failure: {e}") from e
 
     def search(self, vector: list[float], top_k: int = 5) -> list[dict]:
         """
@@ -64,6 +67,9 @@ class FAISSVectorStore:
         Returns:
             list[dict]: Array of matched dict payloads containing ticket_id and similarity score.
         """
+        if len(vector) != self.dimension:
+            raise ValueError(f"Query vector dimensions must be exactly {self.dimension}.")
+
         if self.index.ntotal == 0:
             return []
             
@@ -76,18 +82,35 @@ class FAISSVectorStore:
             scores, indices = self.index.search(np_vector, actual_k)
             
             results = []
+            stale_ids = []
             for score, idx in zip(scores[0], indices[0]):
                 if idx == -1 or idx >= len(self.id_map):
                     continue
                 ticket_id = self.id_map[idx]
+                
+                # Verify ticket exists in DB defensively to prevent downstream DoesNotExist exceptions
+                from backend.models import Ticket
+                if not Ticket.objects.filter(id=ticket_id).exists():
+                    logger.warning(f"Ticket ID {ticket_id} cached in FAISS but missing in DB. Scheduling removal.")
+                    stale_ids.append(ticket_id)
+                    continue
+
                 results.append({
                     "ticket_id": ticket_id,
                     "similarity": float(score)
                 })
+
+            # Clean stale IDs defensively
+            for stale_id in stale_ids:
+                try:
+                    self.remove_ticket(stale_id)
+                except Exception as clean_err:
+                    logger.error(f"Failed to remove stale ticket {stale_id} from FAISS: {clean_err}")
+
             return results
         except Exception as e:
-            logger.error(f"FAISS search operation failed: {e}")
-            return []
+            logger.exception("FAISS search operation failed")
+            raise RuntimeError(f"FAISS search operation failed: {e}") from e
 
     def remove_ticket(self, ticket_id: int):
         """
@@ -108,7 +131,8 @@ class FAISSVectorStore:
             self.save()
             logger.info(f"Removed ticket ID {ticket_id} from vector store.")
         except Exception as e:
-            logger.error(f"Failed to remove vector index mapping for ticket {ticket_id}: {e}")
+            logger.exception(f"Failed to remove vector index mapping for ticket {ticket_id}")
+            raise RuntimeError(f"FAISS vector removal failed: {e}") from e
 
     def clear(self):
         """
@@ -125,7 +149,8 @@ class FAISSVectorStore:
                     os.remove(map_file)
                 logger.info("Cleared FAISS index cache files from disk.")
             except Exception as e:
-                logger.error(f"Error removing FAISS disk cache: {e}")
+                logger.exception("Error removing FAISS disk cache")
+                raise RuntimeError(f"FAISS clear operation failed: {e}") from e
 
     def save(self):
         """
@@ -137,7 +162,8 @@ class FAISSVectorStore:
             with open(map_file, "w") as f:
                 f.write(",".join(map(str, self.id_map)))
         except Exception as e:
-            logger.error(f"Failed to serialize FAISS state: {e}")
+            logger.exception("Failed to serialize FAISS state")
+            raise RuntimeError(f"FAISS serialization failure: {e}") from e
 
     def load(self):
         """
@@ -156,7 +182,5 @@ class FAISSVectorStore:
                             self.id_map = []
                 logger.info(f"Successfully loaded FAISS index. Vectors cached: {self.index.ntotal}")
         except Exception as e:
-            logger.error(f"Failed to load FAISS state: {e}")
-            # Fallback to an empty index if corrupt or unreadable
-            self.index = faiss.IndexFlatIP(self.dimension)
-            self.id_map = []
+            logger.exception(f"Failed to load FAISS state from {self.index_file_path}")
+            raise RuntimeError(f"FAISS index load failure: {e}") from e

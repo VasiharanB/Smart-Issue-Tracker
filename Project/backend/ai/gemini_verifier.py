@@ -57,7 +57,13 @@ class GeminiVerifier:
         # Formulate instructions for the model
         prompt = f"""
         You are a Senior Support Engineer triage system.
-        Compare the two support tickets below and verify if they are reporting the exact same root problem, bug, or request.
+        Compare the two support tickets below and determine whether both tickets refer to the same underlying user problem.
+
+        Treat wording differences, additional details, error descriptions, or slightly more specific contexts as duplicates if the user is experiencing the same core issue.
+        
+        Examples:
+        - "Login failed", "Cannot sign in", and "Unable to login after password reset" should be considered duplicates if they describe the same authentication problem.
+        - Payment/billing failures with minor variations in description or error messages should be considered duplicates if they point to the same underlying checkout or billing system issue.
 
         Support Ticket A (Existing Master Ticket):
         - Category: {existing_ticket.get('category', 'Unknown')}

@@ -15,8 +15,10 @@ class DuplicateDetector:
     2. Runs FAISS indices searches to get Top 5 database match candidates.
     3. Runs candidate comparisons through Gemini LLM verifications.
     """
-    def __init__(self, index_file_path: str = "faiss_index.bin"):
+    def __init__(self, index_file_path: str = None):
         self.embedding_service = EmbeddingService()
+        if index_file_path is None:
+            index_file_path = getattr(settings, "FAISS_INDEX_PATH", "faiss_index.bin")
         self.vector_store = FAISSVectorStore(dimension=384, index_file_path=index_file_path)
         self.verifier = GeminiVerifier()
         
