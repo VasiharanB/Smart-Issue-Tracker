@@ -148,7 +148,7 @@ graph TD
 Before starting, ensure you have **Python 3.10+** and **Node.js 18+** installed.
 
 ### 1. Database Setup (PostgreSQL)
-Establish a local database instance (e.g. `smart_issue_tracker`). If PostgreSQL is unavailable, you can switch the backend database provider to `sqlite3` inside [Project/smart_issue_tracker/settings.py](file:///Project/smart_issue_tracker/settings.py).
+Establish a local database instance (e.g. `smart_issue_tracker`). If PostgreSQL is unavailable, you can switch the backend database provider to `sqlite3` inside [Project/smart_issue_tracker/settings.py](Project/smart_issue_tracker/settings.py).
 
 ### 2. Backend Installation
 Navigate into the `Project/` folder and setup your virtual environment:
@@ -207,7 +207,7 @@ The frontend portal starts at `http://localhost:5173/`.
 
 ## 📊 Screenshots
 
-Here are visual representations of the application views (available inside the [Screenshots](file:///Screenshots/) directory):
+Here are visual representations of the application views (available inside the [Screenshots](Screenshots/) directory):
 
 ### User Ticket Submission Page
 ![User Ticket Submission Page](Screenshots/User_Submission_Page.png)
@@ -262,32 +262,32 @@ A suite of technical specifications and guides has been curated to document this
 ## 🧪 Test Cases
 
 We have prepared a robust testing suite containing functional, integration, and security checks:
-* 📄 **[test_cases.xlsx](file:///Test_Cases/test_cases.xlsx)**: A spreadsheet of 15 realistic user/admin test cases.
-* 📕 **[test_report.pdf](file:///Test_Cases/test_report.pdf)**: A formal QA verification report detailing pass rates, environments, and coverage.
-* 🐍 **[test_duplicate_pipeline.py](file:///Test_Cases/test_duplicate_pipeline.py)**: Automated unit testing validation suite for backend services.
-* See the [Test Cases README](file:///Test_Cases/README.md) for full execution guidelines.
+* 📄 **[test_cases.xlsx](Test_Cases/test_cases.xlsx)**: A spreadsheet of 15 realistic user/admin test cases.
+* 📕 **[test_report.pdf](Test_Cases/test_report.pdf)**: A formal QA verification report detailing pass rates, environments, and coverage.
+* 🐍 **[test_duplicate_pipeline.py](Test_Cases/test_duplicate_pipeline.py)**: Automated unit testing validation suite for backend services.
+* See the [Test Cases README](Test_Cases/README.md) for full execution guidelines.
 
 ---
 
 ## 📊 Sample Data
 
 A mockup dataset is provided to inspect pipeline matching behavior:
-* 📥 **[sample_input_tickets.json](file:///Sample_Data/sample_input_tickets.json)**: Realistic inputs representing unique, exact duplicate, and semantically similar tickets.
-* 📤 **[expected_output.json](file:///Sample_Data/expected_output.json)**: Expected system response values, verdicts, confidence metrics, and matching routes.
-* See the [Sample Data README](file:///Sample_Data/README.md) for execution details.
+* 📥 **[sample_input_tickets.json](Sample_Data/sample_input_tickets.json)**: Realistic inputs representing unique, exact duplicate, and semantically similar tickets.
+* 📤 **[expected_output.json](Sample_Data/expected_output.json)**: Expected system response values, verdicts, confidence metrics, and matching routes.
+* See the [Sample Data README](Sample_Data/README.md) for execution details.
 
 ---
 
 ## 🤖 AI Usage Note
 
 AI tools were leveraged to accelerate boilerplate creation, structural layouts, and test mocks:
-* 📄 **[AI_Usage_Note.md](file:///AI_Usage_Note/AI_Usage_Note.md)**: Details the AI assistants used, prompts drafted, issues resolved, code manually refactored, and technical lessons learned.
+* 📄 **[AI_Usage_Note.md](AI_Usage_Note/AI_Usage_Note.md)**: Details the AI assistants used, prompts drafted, issues resolved, code manually refactored, and technical lessons learned.
 
 ---
 
 ## 🎥 Demo Video
 
-* 📄 **[demo_video_link.txt](file:///Demo_Video/demo_video_link.txt)**: Reference link containing the video walkthrough demonstrating the application intake portal, admin dashboard operations, and AI classification outputs.
+* 📄 **[demo_video_link.txt](Demo_Video/demo_video_link.txt)**: Reference link containing the video walkthrough demonstrating the application intake portal, admin dashboard operations, and AI classification outputs.
 
 ---
 
@@ -315,4 +315,4 @@ AI tools were leveraged to accelerate boilerplate creation, structural layouts, 
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](file:///LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
