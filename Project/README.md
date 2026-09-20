@@ -420,7 +420,7 @@ Configure these variables inside a local `.env` file at the root of the workspac
 | `DJANGO_SECRET_KEY`| String | *Development Key*| Secret security key for cryptographic signatures. |
 | `POSTGRES_DB` | String | `smart_issue_tracker` | PostgreSQL database name. |
 | `POSTGRES_USER` | String | `postgres` | PostgreSQL connection username. |
-| `POSTGRES_PASSWORD`| String | `root1234` | PostgreSQL user password. |
+| `POSTGRES_PASSWORD`| String | *Set locally* | PostgreSQL user password. |
 | `POSTGRES_HOST` | String | `127.0.0.1` | PostgreSQL database host address. |
 | `POSTGRES_PORT` | String | `5432` | PostgreSQL port connection address. |
 | `DEDUPLICATION_SIMILARITY_THRESHOLD` | Float | `0.75` | Minimum cosine similarity score (0.0 to 1.0) before triggering Gemini verification. |
